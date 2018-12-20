@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+    #mazecanvas {
+        height: 500px;
+        width: 500px;
+        border: 2px solid black;
+        background-color:
+    }
+
+    * {
+      padding: 0;
+      margin: 0;
+    }
+    
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport"ca content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id = 'mazecanvas'></canvas>
+    
+</body>
+
+<script>
+   (function() {
+  let mazecanvas = document.getElementById("mazecanvas");
+  let mazecontext = mazecanvas.getContext("2d");
+
+  var mazegrid = [];
+  var Hlines = [];
+  var Vlines = [];
+  var mazerows = 40;
+
+  //make the grid
+  for (let j = 0; j < mazerows; j++) {
+    let temp1 = [];
+    for (let i = 0; i < mazerows; i++) {
+      temp1.push({
+        x: j * (mazecanvas.width / mazerows),
+        y: i * (mazecanvas.height / mazerows),
+        visited: false
+      });
+    }
+    mazegrid.push(temp1);
+  }
+  //this varibale holds the current cell we are checking
+  var x = 0;
+  var y = 0;
+  var currentCell = mazegrid[x][y];
+  currentCell.visited = true;
+  var cellStack = [];
+  cellStack.push({
+    cellx: x,
+    celly: y
+  });
+
+  function drawGrid() {
+    for (let i = 0; i < mazerows; i++) {
+      for (let j = 0; j < mazerows; j++) {
+        mazecontext.beginPath();
+
+        if (currentCell == mazegrid[i][j]) {
+          mazecontext.fillStyle = "green";
+        } else if (mazegrid[i][j].visited == false) {
+          mazecontext.fillStyle = "blue";
+        } else if (
+          (mazegrid[i][j].visited == true && currentCell != mazegrid[i][j]) ||
+          (i == 0 || i == j)
+        ) {
+          mazecontext.fillStyle = "white";
+          mazecontext.fill();
+          mazecontext.stroke();
+        }
+        mazecontext.rect(
+          mazegrid[i][j].x,
+          mazegrid[i][j].y,
+          mazecanvas.width / mazerows - 0.5,
+          mazecanvas.height / mazerows - 0.5
+        );
+        mazecontext.fill();
+      }
+    }
+  }
+  //make an array of lines
+  //make horizontal lines
+  for (let i = 0; i < mazerows; i++) {
+    let newtemp = [];
+    for (let j = 0; j < mazerows; j++) {
+      newtemp.push({
+        x: i * (mazecanvas.width / mazerows),
+        y: j * (mazecanvas.height / mazerows),
+        removed: false
+      });
+    }
+    Hlines.push(newtemp);
+  }
+
+  for (let i = 0; i < mazerows; i++) {
+    let newtemp2 = [];
+    for (let j = 0; j < mazerows; j++) {
+      newtemp2.push({
+        x: i * (mazecanvas.width / mazerows),
+        y: j * (mazecanvas.height / mazerows),
+        removed: false
+      });
+    }
+    Vlines.push(newtemp2);
+  }
+
+  //draw the lines
+
+  function drawLines() {
+    mazecontext.clearRect(0, 0, mazecanvas.width, mazecanvas.height);
+    for (let i = 0; i < mazerows; i++) {
+      for (let j = 0; j < mazerows; j++) {
+        mazecontext.beginPath();
+
+        //these are the lines to be removied if going up or down
+        if (Hlines[j][i].removed == false) {
+          mazecontext.moveTo(Hlines[j][i].x, Hlines[j][i].y);
+          mazecontext.lineTo(
+            Hlines[j][i].x + mazecanvas.width / mazerows,
+            Hlines[j][i].y
+          );
+          mazecontext.stroke();
+        }
+
+        if (Vlines[j][i].removed == false) {
+          mazecontext.moveTo(Vlines[j][i].x, Vlines[j][i].y);
+          mazecontext.lineTo(
+            Vlines[j][i].x,
+            Vlines[j][i].y + mazecanvas.height / mazerows
+          );
+          mazecontext.stroke();
+        }
+      }
+    }
+  }
+
+  function move() {
+    let neighbors = checkNeigbors();
+    if (neighbors.length == 0) {
+      currentCell = mazegrid[cellStack[0].cellx][cellStack[0].celly];
+      x = cellStack[0].cellx;
+      y = cellStack[0].celly;
+      cellStack.shift();
+      return null;
+    }
+
+    let move = Math.floor(Math.random() * neighbors.length);
+    let newX = neighbors[move][0];
+    let newY = neighbors[move][1];
+    currentCell = mazegrid[newX][newY];
+    currentCell.visited = true;
+    if (x == newX - 1) {
+      Vlines[x + 1][y].removed = true;
+    }
+
+    if (y == newY + 1) {
+      Hlines[x][y].removed = true;
+    } else if (x == newX + 1) {
+      Vlines[x][y].removed = true;
+    } else if (y == newY - 1) {
+      Hlines[x][y + 1].removed = true;
+    }
+    x = newX;
+    y = newY;
+
+    cellStack.unshift({
+      cellx: x,
+      celly: y
+    });
+  }
+
+  //make sure to set the current cell before counting neigbors
+  function checkNeigbors() {
+    let liveNeigbors = [];
+
+    if (x - 1 >= 0 && !mazegrid[x - 1][y].visited) {
+      liveNeigbors.push([x - 1, y]);
+    }
+
+    if (x + 1 < mazerows && !mazegrid[x + 1][y].visited) {
+      liveNeigbors.push([x + 1, y]);
+    }
+
+    if (y - 1 >= 0 && !mazegrid[x][y - 1].visited) {
+      liveNeigbors.push([x, y - 1]);
+    }
+
+    if (y + 1 < mazerows && !mazegrid[x][y + 1].visited) {
+      liveNeigbors.push([x, y + 1]);
+    }
+
+    return liveNeigbors;
+    //returns array of all unvisited neigbors
+  }
+  drawGrid();
+  //drawLines();
+
+  mazecanvas.addEventListener("click", goMazeGo);
+
+  function goMazeGo() {
+    setInterval(generateMaze, 1);
+  }
+  function generateMaze() {
+    drawLines();
+    drawGrid();
+    move();
+    checkNeigbors();
+  }
+})();
+
+ </script>
+ </html>
